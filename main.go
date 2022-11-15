@@ -15,6 +15,7 @@ import (
 	"github.com/zegl/hackagotchi/achivements"
 	"github.com/zegl/hackagotchi/cats"
 	"github.com/zegl/hackagotchi/ingest"
+	"github.com/zegl/hackagotchi/shells"
 	"github.com/zegl/hackagotchi/state"
 )
 
@@ -56,10 +57,20 @@ var (
 
 var (
 	flagPreexec = flag.String("import-single", "", "Import a single execution. To be used with shell pre/post-exec hooks")
+	flagFish    = flag.Bool("fish", false, "Print shell integration for the fish shell")
+	flagZsh     = flag.Bool("zsh", false, "Print shell integration for the zsh shell")
 )
 
 func main() {
 	flag.Parse()
+
+	if *flagFish {
+		fmt.Println(shells.Fish)
+		return
+	} else if *flagZsh {
+		fmt.Println(shells.Zsh)
+		return
+	}
 
 	storagePath, err := state.NewStoragePath()
 	if err != nil {

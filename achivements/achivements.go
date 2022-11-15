@@ -1,6 +1,15 @@
 package achivements
 
-import "time"
+import (
+	"bufio"
+	"errors"
+	"fmt"
+	"os"
+	"path"
+	"time"
+
+	"github.com/zegl/hackagotchi/state"
+)
 
 type Achivement struct {
 	Name        string    `json:"name"`
@@ -54,4 +63,26 @@ var (
 
 func init() {
 	_ = falseFunc
+}
+
+func ParseHistory(storagePath state.StoragePath) ([]HistoryEvent, error) {
+	file, err := os.Open(path.Join(string(storagePath), "history_wal"))
+	if errors.Is(err, os.ErrNotExist) {
+		return []HistoryEvent{}, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to read wal: %w", err)
+	}
+	defer file.Close()
+
+	var events []HistoryEvent
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		events = append(events, HistoryEvent{Cmd: scanner.Text()})
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("failed to scan wal: %w", err)
+	}
+
+	return events, nil
 }

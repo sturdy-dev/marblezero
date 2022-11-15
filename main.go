@@ -15,8 +15,6 @@ import (
 	"github.com/zegl/hackagotchi/achivements"
 	"github.com/zegl/hackagotchi/cats"
 	"github.com/zegl/hackagotchi/state"
-
-	_ "embed"
 )
 
 var (
@@ -76,9 +74,17 @@ func main() {
 			log.Println(err)
 			os.Exit(1)
 		}
-	} else {
-		output(config)
+		return
 	}
+
+	events, err := achivements.ParseHistory(storagePath)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	// Graphical app
+	output(config, events)
 }
 
 func importSingle(storagePath state.StoragePath, cmd string) error {
@@ -102,8 +108,8 @@ func importSingle(storagePath state.StoragePath, cmd string) error {
 	return nil
 }
 
-func output(config *state.Config) {
-	p := tea.NewProgram(NewModel(config))
+func output(config *state.Config, events []achivements.HistoryEvent) {
+	p := tea.NewProgram(NewModel(config, events))
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
@@ -122,10 +128,10 @@ type model struct {
 	frame     int
 	textInput textinput.Model
 	config    *state.Config
+	events    []achivements.HistoryEvent
 }
 
-func NewModel(config *state.Config) *model {
-
+func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
 	ti := textinput.New()
 	ti.Placeholder = "Nala"
 	ti.Focus()
@@ -146,6 +152,7 @@ func NewModel(config *state.Config) *model {
 		screen:    screen,
 		config:    config,
 		textInput: ti,
+		events:    events,
 	}
 }
 
@@ -193,7 +200,7 @@ func (m model) View() string {
 	}
 
 	for _, a := range achivements.Achivements {
-		if a.Func([]achivements.HistoryEvent{}) {
+		if a.Func(m.events) {
 			showAchivements = append(showAchivements, listDone(a.Name))
 		} else {
 			showAchivements = append(showAchivements, listItem(a.Name))

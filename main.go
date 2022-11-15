@@ -9,10 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/zegl/hackagotchi/achivements"
 	"github.com/zegl/hackagotchi/cats"
+	"github.com/zegl/hackagotchi/state"
 
 	_ "embed"
 )
@@ -57,28 +59,30 @@ var (
 func main() {
 	flag.Parse()
 
+	storagePath, err := state.NewStoragePath()
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
+	config, err := state.LoadConfig(storagePath)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+
 	if *flagPreexec != "" {
-		if err := importSingle(*flagPreexec); err != nil {
+		if err := importSingle(storagePath, *flagPreexec); err != nil {
 			log.Println(err)
 			os.Exit(1)
 		}
 	} else {
-		output()
+		output(config)
 	}
 }
 
-func importSingle(cmd string) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("could not find config dir: %w", err)
-	}
-
-	hackagotchiDir := path.Join(homeDir, ".config", "hackagotchi")
-	if err := os.MkdirAll(hackagotchiDir, 0777); err != nil {
-		return fmt.Errorf("failed to create ~/.config/hackagotchi directory: %w", err)
-	}
-
-	historyFilePath := path.Join(hackagotchiDir, "history_wal")
+func importSingle(storagePath state.StoragePath, cmd string) error {
+	historyFilePath := path.Join(string(storagePath), "history_wal")
 
 	fp, err := os.OpenFile(historyFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0664)
 	if err != nil {
@@ -98,31 +102,75 @@ func importSingle(cmd string) error {
 	return nil
 }
 
-func output() {
-	p := tea.NewProgram(NewModel())
+func output(config *state.Config) {
+	p := tea.NewProgram(NewModel(config))
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
 		os.Exit(1)
 	}
 }
 
+type Screen int
+
+const (
+	HomeScreen Screen = iota
+	SetupNameScreen
+)
+
 type model struct {
-	frame int
+	screen    Screen
+	frame     int
+	textInput textinput.Model
+	config    *state.Config
 }
 
-func NewModel() *model {
-	return &model{}
+func NewModel(config *state.Config) *model {
+
+	ti := textinput.New()
+	ti.Placeholder = "Nala"
+	ti.Focus()
+	ti.CharLimit = 12
+	ti.Width = 12
+	ti.BackgroundStyle = lipgloss.NewStyle().Background(orange)
+	ti.PlaceholderStyle = lipgloss.NewStyle().Background(orange)
+	ti.PromptStyle = lipgloss.NewStyle().Background(orange)
+	ti.CursorStyle = lipgloss.NewStyle().Background(orange)
+	ti.TextStyle = lipgloss.NewStyle().Background(orange).Foreground(lipgloss.Color("#FAFAFA")).Bold(true)
+
+	screen := HomeScreen
+	if config.Name == "" {
+		screen = SetupNameScreen
+	}
+
+	return &model{
+		screen:    screen,
+		config:    config,
+		textInput: ti,
+	}
 }
 
 func (m model) Init() tea.Cmd {
-	return m.characterAnimation()
+	return tea.Batch(textinput.Blink, m.characterAnimation())
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "enter", "ctrl+c", "q":
+		case "enter":
+			if m.screen == SetupNameScreen {
+				m.config.Name = m.textInput.Value()
+				if err := m.config.Save(); err != nil {
+					log.Println(err)
+					return m, tea.Quit
+				}
+				m.screen = HomeScreen
+				m.frame = 0 // reset counter
+
+			} else {
+				return m, tea.Quit
+			}
+		case "ctrl+c", "q":
 			return m, tea.Quit
 		}
 	case characterAnimationMsg:
@@ -130,13 +178,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.characterAnimation()
 	}
 
-	return m, nil
+	var cmd tea.Cmd
+
+	if m.screen == SetupNameScreen {
+		m.textInput, cmd = m.textInput.Update(msg)
+	}
+
+	return m, cmd
 }
 
 func (m model) View() string {
-
 	var showAchivements []string = []string{
-		listHeader("Latest achivements"),
+		listHeader("Achivements"),
 	}
 
 	for _, a := range achivements.Achivements {
@@ -165,13 +218,19 @@ func (m model) View() string {
 		cats.Cat3,
 		cats.CatAmused,
 	}
-
 	cat := cats[m.frame%4]
+
+	var deviceRight string
+	if m.screen == HomeScreen {
+		deviceRight = inScreenStyle.Copy().Align(lipgloss.Left).PaddingLeft(3).Width(32).Render(fmt.Sprintf("%s\nMood: Happy\nLevel: 3", m.config.Name))
+	} else if m.screen == SetupNameScreen {
+		deviceRight = inScreenStyle.Copy().Align(lipgloss.Left).PaddingLeft(3).Width(32).Render("Hey buddy! What's your name?\n" + m.textInput.View())
+	}
 
 	cols := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		inScreenStyle.Copy().Bold(true).Width(24).Render(cat),
-		inScreenStyle.Copy().Align(lipgloss.Left).PaddingLeft(3).Render(fmt.Sprintf("zegl\nMood: Happy\nLevel: %d", m.frame)),
+		deviceRight,
 	)
 
 	var device = lipgloss.NewStyle().
@@ -179,15 +238,21 @@ func (m model) View() string {
 		BorderForeground(lipgloss.Color("228")).
 		BorderBackground(orange).Render(cols)
 
+	var horizontals []string = []string{device}
+
+	// Show achivements if setup
+	if m.screen == HomeScreen {
+		horizontals = append(horizontals, achivementsFrame)
+	}
+
 	frame := lipgloss.JoinHorizontal(
 		lipgloss.Center,
-		device,
-		achivementsFrame,
+		horizontals...,
 	)
 
 	var all = lipgloss.NewStyle().Render(frame)
 
-	doc.WriteString(all)
+	doc.WriteString(all + "\n\n")
 
 	return doc.String()
 }

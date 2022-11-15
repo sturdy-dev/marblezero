@@ -11,6 +11,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/zegl/hackagotchi/achivements"
 	"github.com/zegl/hackagotchi/cats"
 
 	_ "embed"
@@ -133,20 +134,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	achivements := list.Copy().Width(52).Render(
-		lipgloss.JoinVertical(lipgloss.Left,
-			listHeader("Latest achivements"),
-			listItem("Use Git"),
-			listItem("Holy trinity (use npm, yarn, and pnpm in one week)"),
-			listDone("Use the --force"),
-			listItem("Use Slack"),
-			listDone("Use Teams"),
-		),
-	)
+
+	var showAchivements []string = []string{
+		listHeader("Latest achivements"),
+	}
+
+	for _, a := range achivements.Achivements {
+		if a.Func([]achivements.HistoryEvent{}) {
+			showAchivements = append(showAchivements, listDone(a.Name))
+		} else {
+			showAchivements = append(showAchivements, listItem(a.Name))
+		}
+	}
+
+	achivementsFrame := list.Copy().Width(52).Render(lipgloss.JoinVertical(lipgloss.Left, showAchivements...))
 
 	doc := strings.Builder{}
 
-	var historyStyle = lipgloss.NewStyle().
+	var inScreenStyle = lipgloss.NewStyle().
 		Align(lipgloss.Left).
 		Foreground(lipgloss.Color("#FAFAFA")).
 		Background(orange).
@@ -165,8 +170,8 @@ func (m model) View() string {
 
 	cols := lipgloss.JoinHorizontal(
 		lipgloss.Top,
-		historyStyle.Copy().Bold(true).Width(24).Render(cat),
-		historyStyle.Copy().Align(lipgloss.Left).PaddingLeft(3).Render(fmt.Sprintf("zegl\nMood: Happy\nLevel: %d", m.frame)),
+		inScreenStyle.Copy().Bold(true).Width(24).Render(cat),
+		inScreenStyle.Copy().Align(lipgloss.Left).PaddingLeft(3).Render(fmt.Sprintf("zegl\nMood: Happy\nLevel: %d", m.frame)),
 	)
 
 	var device = lipgloss.NewStyle().
@@ -177,7 +182,7 @@ func (m model) View() string {
 	frame := lipgloss.JoinHorizontal(
 		lipgloss.Center,
 		device,
-		achivements,
+		achivementsFrame,
 	)
 
 	var all = lipgloss.NewStyle().Render(frame)

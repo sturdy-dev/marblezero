@@ -56,9 +56,10 @@ var (
 )
 
 var (
-	flagPreexec = flag.String("import-single", "", "Import a single execution. To be used with shell pre/post-exec hooks")
-	flagFish    = flag.Bool("fish", false, "Print shell integration for the fish shell")
-	flagZsh     = flag.Bool("zsh", false, "Print shell integration for the zsh shell")
+	flagPreexec        = flag.String("import-single", "", "Import a single execution. To be used with shell pre/post-exec hooks")
+	flagFish           = flag.Bool("fish", false, "Print shell integration for the fish shell")
+	flagZsh            = flag.Bool("zsh", false, "Print shell integration for the zsh shell")
+	flagDebugColorMode = flag.Bool("debug-colors", false, "Debug layout")
 )
 
 func main() {
@@ -247,18 +248,38 @@ func (m model) View() string {
 		Align(lipgloss.Left).
 		Foreground(lipgloss.Color("#FAFAFA")).
 		Background(orange)
-	cats := []string{
-		cats.CatDefault,
-		cats.CatDefaultLookRight,
-		cats.Cat3,
-		cats.CatAmused,
+
+	var cat string
+
+	switch m.screen {
+	case SetupNameScreen:
+		cat = cats.CatCurious
+	default:
+		cats := []string{
+			cats.CatNormalStraight,
+			cats.CatNormalStraightRaisedTail,
+			cats.CatNormalStraight,
+			cats.CatNormalRight,
+			cats.CatNormalStraight,
+			cats.CatAmused,
+			cats.CatNormalStraight,
+			cats.CatNormalStraightFoldedLeftEar,
+			cats.CatNormalStraight,
+		}
+		cat = cats[m.frame%len(cats)]
 	}
-	cat := cats[m.frame%4]
 
 	level := len(m.completedAchivements)/3 + 1
 
-	var deviceRight string
+	catStyle := inScreenStyle.Copy().Bold(true).Height(11).Width(24) // left side of screen
+	deviceRightStyle := inScreenStyle.Copy().Height(11).Width(32)    // right side of screen
 
+	if *flagDebugColorMode {
+		catStyle.Background(lipgloss.Color("#4d7c0f"))
+		deviceRightStyle.Background(lipgloss.Color("#b91c1c"))
+	}
+
+	var deviceRight string
 	switch m.screen {
 	case HomeScreen:
 		charStats := fmt.Sprintf("%s\nMood: Happy\nLevel: %d (421 XP)", m.config.Name, level)
@@ -280,17 +301,17 @@ func (m model) View() string {
 
 		latestAchivement := inScreenStyle.Copy().Width(29).Render(fmt.Sprintf("%s\n%s\n(%d XP)", achivementName, achivementDescription, 12))
 
-		deviceRight = inScreenStyle.Copy().Height(11).PaddingLeft(3).Width(32).Render(
+		deviceRight = deviceRightStyle.Copy().PaddingLeft(3).Render(
 			lipgloss.JoinVertical(lipgloss.Left, charStats, latestAchivementHeader, latestAchivement),
 		)
 	case SetupNameScreen:
 		bubble := inScreenStyle.Copy().Padding(0).Height(0).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, "<\n", speechBubble.Render("Meow! Meow!\nWhat's my name?")))
-		deviceRight = inScreenStyle.Copy().Height(11).Width(32).Render(lipgloss.JoinVertical(lipgloss.Left, bubble, m.textInput.View()))
+		deviceRight = deviceRightStyle.PaddingLeft(3).Render(lipgloss.JoinVertical(lipgloss.Left, "\n\n", bubble, m.textInput.View()))
 	}
 
 	cols := lipgloss.JoinHorizontal(
 		lipgloss.Center,
-		inScreenStyle.Copy().Bold(true).Height(11).Width(24).Render(cat),
+		catStyle.Render(cat),
 		deviceRight,
 	)
 

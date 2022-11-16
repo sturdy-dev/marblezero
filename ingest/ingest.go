@@ -12,22 +12,11 @@ import (
 	"github.com/zegl/hackagotchi/state"
 )
 
-func Single(storagePath state.StoragePath, cmd string) error {
-	historyFilePath := path.Join(string(storagePath), "history_wal")
-
-	fp, err := os.OpenFile(historyFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0664)
-	if err != nil {
-		return fmt.Errorf("failed to open wal: %w", err)
-	}
-
+func parse(cmd string, ts time.Time) achivements.HistoryEvent {
 	parts := strings.Split(cmd, " ")
 	prog := parts[0]
-
-	event := achivements.HistoryEvent{
-		Cmd:     prog,
-		At:      time.Now(),
-		IsForce: strings.Contains(cmd, "--force"),
-	}
+	var subcommand string
+	var exts []string
 
 	// find subcommand (first non flag)
 	if prog == "git" ||
@@ -38,10 +27,37 @@ func Single(storagePath state.StoragePath, cmd string) error {
 			if strings.HasPrefix(p, "-") {
 				continue
 			}
-			event.SubCommand = p
+			subcommand = p
 			break
 		}
 	}
+
+	for _, p := range parts {
+		if last := strings.LastIndexByte(p, '.'); last > len(p)-4 && last < len(p)-1 {
+			exts = append(exts, p[last+1:])
+		}
+	}
+
+	return achivements.HistoryEvent{
+		Cmd:            prog,
+		At:             ts,
+		IsForce:        strings.Contains(cmd, "--force"),
+		SubCommand:     subcommand,
+		FileExtensions: exts,
+	}
+}
+
+func Single(storagePath state.StoragePath, cmd string) error {
+	historyFilePath := path.Join(string(storagePath), "history_wal")
+
+	fp, err := os.OpenFile(historyFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0664)
+	if err != nil {
+		return fmt.Errorf("failed to open wal: %w", err)
+	}
+
+	ts := time.Now()
+
+	event := parse(cmd, ts)
 
 	raw, err := json.Marshal(event)
 	if err != nil {

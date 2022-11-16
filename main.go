@@ -155,7 +155,7 @@ func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
 		}
 	}
 	sort.Slice(completedAchivements, func(a, b int) bool {
-		return completedAchivements[a].AwardedAt.Before(completedAchivements[b].AwardedAt)
+		return completedAchivements[a].AwardedAt.After(completedAchivements[b].AwardedAt)
 	})
 
 	return &model{
@@ -246,10 +246,7 @@ func (m model) View() string {
 	var inScreenStyle = lipgloss.NewStyle().
 		Align(lipgloss.Left).
 		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(orange).
-		Height(11).
-		Padding(1, 1)
-
+		Background(orange)
 	cats := []string{
 		cats.CatDefault,
 		cats.CatDefaultLookRight,
@@ -261,16 +258,39 @@ func (m model) View() string {
 	level := len(m.completedAchivements)/3 + 1
 
 	var deviceRight string
-	if m.screen == HomeScreen {
-		deviceRight = inScreenStyle.Copy().PaddingLeft(3).Width(32).Render(fmt.Sprintf("%s\nMood: Happy\nLevel: %d", m.config.Name, level))
-	} else if m.screen == SetupNameScreen {
+
+	switch m.screen {
+	case HomeScreen:
+		charStats := fmt.Sprintf("%s\nMood: Happy\nLevel: %d (421 XP)", m.config.Name, level)
+
+		latestAchivementHeader := inScreenStyle.Copy().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderBottom(true).
+			BorderForeground(yellow).
+			Foreground(yellow).
+			MarginTop(2).
+			Width(29).
+			Render("Latest Achivement")
+
+		a := m.completedAchivements[0]
+
+		achivementName := inScreenStyle.Copy().Bold(true).Render(a.Name)
+		// achivementXP := inScreenStyle.Copy().Render(fmt.Sprintf(" (%d XP)", 25))
+		achivementDescription := inScreenStyle.Copy().Foreground(subtle).Render(a.Description)
+
+		latestAchivement := inScreenStyle.Copy().Width(29).Render(fmt.Sprintf("%s\n%s\n(%d XP)", achivementName, achivementDescription, 12))
+
+		deviceRight = inScreenStyle.Copy().Height(11).PaddingLeft(3).Width(32).Render(
+			lipgloss.JoinVertical(lipgloss.Left, charStats, latestAchivementHeader, latestAchivement),
+		)
+	case SetupNameScreen:
 		bubble := inScreenStyle.Copy().Padding(0).Height(0).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, "<\n", speechBubble.Render("Meow! Meow!\nWhat's my name?")))
 		deviceRight = inScreenStyle.Copy().Height(11).Width(32).Render(lipgloss.JoinVertical(lipgloss.Left, bubble, m.textInput.View()))
 	}
 
 	cols := lipgloss.JoinHorizontal(
-		lipgloss.Top,
-		inScreenStyle.Copy().Bold(true).Width(24).Render(cat),
+		lipgloss.Center,
+		inScreenStyle.Copy().Bold(true).Height(11).Width(24).Render(cat),
 		deviceRight,
 	)
 
@@ -284,7 +304,7 @@ func (m model) View() string {
 
 	switch m.screen {
 	case HomeScreen:
-		horizontals = append(horizontals, m.latestAchivements())
+		// horizontals = append(horizontals, m.latestAchivements())
 	case ListAllAchivementsScreen:
 		horizontals = append(horizontals, m.listAllAchivements())
 	case HelpScreen:
@@ -298,7 +318,7 @@ func (m model) View() string {
 
 	var all = lipgloss.NewStyle().Render(frame)
 
-	doc.WriteString(all + "\n\n")
+	doc.WriteString(all + "\n")
 
 	return doc.String()
 }

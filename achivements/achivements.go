@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path"
 	"time"
@@ -26,11 +27,15 @@ type HistoryEvent struct {
 
 	IsForce bool `json:"is_force,omitempty"`
 	IsRmRf  bool `json:"is_rm_rf,omitempty"`
+
+	FileExtensions []string `json:"file_extensions,omitempty"`
 }
 
 type AchivementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
 
 type AchivementFilterFunc func(event HistoryEvent) bool
+
+const achivementNameMaxLength = 29
 
 var (
 	trueFunc AchivementFunc = func(events []HistoryEvent) (bool, *time.Time) {
@@ -118,6 +123,9 @@ var (
 
 		// Python
 		{Name: "Import from __legacy__", Description: "Use Python2 10 times", Func: usedCommandFunc("python2", 10)},
+		{Name: "Early adopter", Description: "Use Python3", Func: usedCommandFunc("python3", 1)},
+		{Name: "Master of indentation", Description: "Use Python 100 times", Func: usedCommandFunc("python", 100)},
+		{Name: "Parseltongue", Description: "Use Python 1000 times", Func: usedCommandFunc("python", 1000)},
 
 		// Git
 		{Name: "Teamwork makes the dream work", Description: "Use git", Func: usedCommandFunc("git", 1)},
@@ -173,4 +181,12 @@ func ParseHistory(storagePath state.StoragePath) ([]HistoryEvent, error) {
 	}
 
 	return events, nil
+}
+
+func init() {
+	for _, a := range Achivements {
+		if len(a.Name) > achivementNameMaxLength {
+			log.Printf("Achivement name (%s) is too long. Len=%d MaxAllowed=%d", a.Name, len(a.Name), achivementNameMaxLength)
+		}
+	}
 }

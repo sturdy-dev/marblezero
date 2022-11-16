@@ -24,6 +24,8 @@ var (
 	highlight = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
 	special   = lipgloss.AdaptiveColor{Light: "#43BF6D", Dark: "#73F59F"}
 
+	defaultText = lipgloss.AdaptiveColor{Light: "#262626", Dark: "#FAFAFA"}
+
 	orange = lipgloss.Color("#f97316")
 	yellow = lipgloss.Color("#f9cf16")
 
@@ -59,8 +61,8 @@ var (
 			Foreground(lipgloss.Color("#FAFAFA")).
 			Background(orange)
 
-	catStyle         = inScreenStyle.Copy().Bold(true).Height(11).Width(24) // left side of screen
-	deviceRightStyle = inScreenStyle.Copy().Height(11).Width(32)            // right side of screen
+	catStyle         = inScreenStyle.Copy().Bold(true).Height(11).Width(24)              // left side of screen
+	deviceRightStyle = inScreenStyle.Copy().Height(11).Width(32).Foreground(defaultText) // right side of screen
 )
 
 var (

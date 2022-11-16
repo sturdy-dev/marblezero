@@ -27,15 +27,12 @@ var (
 	orange = lipgloss.Color("#f97316")
 	yellow = lipgloss.Color("#f9cf16")
 
-	list = lipgloss.NewStyle().
-		BorderForeground(subtle).
-		MarginLeft(4)
-
 	listHeader = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderBottom(true).
 			BorderForeground(subtle).
-			MarginRight(2).
+			Background(orange).
+			Width(31).
 			Render
 
 	listItem = lipgloss.NewStyle().PaddingLeft(2).Render
@@ -43,16 +40,27 @@ var (
 	checkMark = lipgloss.NewStyle().SetString("✓").
 			Foreground(special).
 			PaddingRight(1).
+			Background(orange).
 			String()
 
 	listDone = func(s string) string {
 		return checkMark + lipgloss.NewStyle().
 			Strikethrough(true).
 			Foreground(lipgloss.AdaptiveColor{Light: "#969B86", Dark: "#696969"}).
+			Background(orange).
+			Width(29).
 			Render(s)
 	}
 
 	speechBubble = lipgloss.NewStyle().BorderStyle(lipgloss.RoundedBorder())
+
+	inScreenStyle = lipgloss.NewStyle().
+			Align(lipgloss.Left).
+			Foreground(lipgloss.Color("#FAFAFA")).
+			Background(orange)
+
+	catStyle         = inScreenStyle.Copy().Bold(true).Height(11).Width(24) // left side of screen
+	deviceRightStyle = inScreenStyle.Copy().Height(11).Width(32)            // right side of screen
 )
 
 var (
@@ -104,6 +112,13 @@ func main() {
 }
 
 func output(config *state.Config, events []achivements.HistoryEvent) {
+
+	// Set debug colors
+	if *flagDebugColorMode {
+		catStyle.Background(lipgloss.Color("#4d7c0f"))
+		deviceRightStyle.Background(lipgloss.Color("#b91c1c"))
+	}
+
 	p := tea.NewProgram(NewModel(config, events))
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
@@ -128,6 +143,8 @@ type model struct {
 
 	events               []achivements.HistoryEvent
 	completedAchivements []achivements.Achivement
+
+	rightScreenModel tea.Model
 }
 
 func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
@@ -173,7 +190,6 @@ func (m model) Init() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
 	preScreen := m.screen
 
 	switch msg := msg.(type) {
@@ -203,25 +219,30 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "r":
 			if m.screen == HomeScreen {
 				m.screen = SetupNameScreen
-
 			}
 
 		// List all achivements
 		case "a":
 			if m.screen == HomeScreen {
 				m.screen = ListAllAchivementsScreen
+				m.rightScreenModel = NewShowAllAchivementsModel(m.events)
 			}
 
 		// show help
-		case "?":
+		case "?", "h":
 			if m.screen == HomeScreen {
 				m.screen = HelpScreen
+				m.rightScreenModel = NewHelpModel()
 			}
 
-		// Quit program if on home
+		// Quit program if on home, else go back
 		case "q", "esc":
 			if m.screen == HomeScreen {
 				return m, tea.Quit
+			} else if m.screen == ListAllAchivementsScreen {
+				m.screen = HomeScreen // go back
+			} else if m.screen == HelpScreen {
+				m.screen = HomeScreen // go back
 			}
 		// Quit program
 		case "ctrl+c":
@@ -231,6 +252,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case characterAnimationMsg:
 		m.frame++
 		return m, m.characterAnimation()
+
+	case goToHomeMsg:
+		m.screen = HomeScreen
+		m.rightScreenModel = nil
+	}
+
+	if m.rightScreenModel != nil {
+		m.rightScreenModel.Update(msg)
 	}
 
 	var cmd tea.Cmd
@@ -243,11 +272,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	doc := strings.Builder{}
-
-	var inScreenStyle = lipgloss.NewStyle().
-		Align(lipgloss.Left).
-		Foreground(lipgloss.Color("#FAFAFA")).
-		Background(orange)
 
 	var cat string
 
@@ -270,19 +294,12 @@ func (m model) View() string {
 	}
 
 	level := len(m.completedAchivements)/3 + 1
-
-	catStyle := inScreenStyle.Copy().Bold(true).Height(11).Width(24) // left side of screen
-	deviceRightStyle := inScreenStyle.Copy().Height(11).Width(32)    // right side of screen
-
-	if *flagDebugColorMode {
-		catStyle.Background(lipgloss.Color("#4d7c0f"))
-		deviceRightStyle.Background(lipgloss.Color("#b91c1c"))
-	}
+	xp := len(m.completedAchivements) * 13
 
 	var deviceRight string
 	switch m.screen {
 	case HomeScreen:
-		charStats := fmt.Sprintf("%s\nMood: Happy\nLevel: %d (421 XP)", m.config.Name, level)
+		charStats := fmt.Sprintf("%s\nMood: Happy\nLevel: %d (%d XP)", m.config.Name, level, xp)
 
 		latestAchivementHeader := inScreenStyle.Copy().
 			BorderStyle(lipgloss.NormalBorder()).
@@ -304,9 +321,13 @@ func (m model) View() string {
 		deviceRight = deviceRightStyle.Copy().PaddingLeft(3).Render(
 			lipgloss.JoinVertical(lipgloss.Left, charStats, latestAchivementHeader, latestAchivement),
 		)
+
 	case SetupNameScreen:
 		bubble := inScreenStyle.Copy().Padding(0).Height(0).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, "<\n", speechBubble.Render("Meow! Meow!\nWhat's my name?")))
 		deviceRight = deviceRightStyle.PaddingLeft(3).Render(lipgloss.JoinVertical(lipgloss.Left, "\n\n", bubble, m.textInput.View()))
+
+	case ListAllAchivementsScreen, HelpScreen:
+		deviceRight = m.rightScreenModel.View()
 	}
 
 	cols := lipgloss.JoinHorizontal(
@@ -322,15 +343,6 @@ func (m model) View() string {
 		Render(cols)
 
 	var horizontals []string = []string{device}
-
-	switch m.screen {
-	case HomeScreen:
-		// horizontals = append(horizontals, m.latestAchivements())
-	case ListAllAchivementsScreen:
-		horizontals = append(horizontals, m.listAllAchivements())
-	case HelpScreen:
-		horizontals = append(horizontals, m.showCommands())
-	}
 
 	frame := lipgloss.JoinHorizontal(
 		lipgloss.Top,
@@ -350,43 +362,10 @@ func (m model) characterAnimation() tea.Cmd {
 	})
 }
 
-func (m model) listAllAchivements() string {
-	var showAchivements []string = []string{
-		listHeader("All Achivements"),
-	}
-	for _, a := range achivements.Achivements {
-		if ok, _ := a.Func(m.events); ok {
-			showAchivements = append(showAchivements, listDone(a.Name))
-		} else {
-			showAchivements = append(showAchivements, listItem(a.Name))
-		}
-	}
-
-	return list.Copy().PaddingTop(1).Width(52).Render(lipgloss.JoinVertical(lipgloss.Left, showAchivements...))
-}
-
-func (m model) latestAchivements() string {
-	var showAchivements []string = []string{
-		listHeader("Latest Achivements"),
-	}
-	for _, a := range m.completedAchivements {
-		showAchivements = append(showAchivements, listDone(a.Name))
-	}
-
-	return list.Copy().PaddingTop(1).Width(52).Render(lipgloss.JoinVertical(lipgloss.Left, showAchivements...))
-}
-
-func (m model) showCommands() string {
-	var commands []string = []string{
-		listHeader("Commands"),
-		"a: show achivements",
-		"r: rename your pet",
-		"q / esc / enter / cmd+c: quit",
-		"",
-		lipgloss.NewStyle().Foreground(subtle).Render("(press enter to go back)"),
-	}
-
-	return list.Copy().PaddingTop(1).Width(52).Render(lipgloss.JoinVertical(lipgloss.Left, commands...))
-}
-
 type characterAnimationMsg time.Time
+
+type goToHomeMsg struct{}
+
+func goToHomeCmd() tea.Msg {
+	return goToHomeMsg{}
+}

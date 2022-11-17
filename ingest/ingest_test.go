@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/zegl/hackagotchi/achivements"
+	"github.com/sturdy-dev/hackagotchi/achivements"
 )
 
 func TestParse(t *testing.T) {

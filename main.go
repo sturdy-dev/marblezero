@@ -12,11 +12,11 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/zegl/hackagotchi/achivements"
-	"github.com/zegl/hackagotchi/cats"
-	"github.com/zegl/hackagotchi/ingest"
-	"github.com/zegl/hackagotchi/shells"
-	"github.com/zegl/hackagotchi/state"
+	"github.com/sturdy-dev/hackagotchi/achivements"
+	"github.com/sturdy-dev/hackagotchi/cats"
+	"github.com/sturdy-dev/hackagotchi/ingest"
+	"github.com/sturdy-dev/hackagotchi/shells"
+	"github.com/sturdy-dev/hackagotchi/state"
 )
 
 var (

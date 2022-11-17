@@ -1,7 +1,7 @@
 # Set Shell fish
 
-Output demo/out.mp4
-Output demo/golden.ascii
+Output demo/intro.gif
+Output demo/intro-golden.ascii
 
 Set TypingSpeed 75ms
 Set FontSize 22

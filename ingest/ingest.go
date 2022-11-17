@@ -15,14 +15,15 @@ import (
 func parse(cmd string, ts time.Time) achivements.HistoryEvent {
 	parts := strings.Split(cmd, " ")
 	prog := parts[0]
-	var subcommand string
-	var exts []string
 
 	// find subcommand (first non flag)
-	if prog == "git" ||
-		prog == "npm" || prog == "yarn" || prog == "pnpm" || //	JS
-		prog == "pip3" || prog == "pip" || // Python
-		false {
+	var subcommand string
+	switch prog {
+	case "git",
+		// JS fanboys
+		"npm", "yarn", "pnpm",
+		// Python
+		"pip3", "pip":
 		for _, p := range parts[1:] {
 			if strings.HasPrefix(p, "-") {
 				continue
@@ -32,18 +33,33 @@ func parse(cmd string, ts time.Time) achivements.HistoryEvent {
 		}
 	}
 
+	var exts []string
 	for _, p := range parts {
 		if last := strings.LastIndexByte(p, '.'); last > len(p)-4 && last < len(p)-1 {
 			exts = append(exts, p[last+1:])
 		}
 	}
 
+	var flags []string
+	switch prog {
+	case "xcode-select", "rm", "git":
+		for _, p := range parts {
+			if strings.HasPrefix(p, "-") {
+				flags = append(flags, p)
+			}
+		}
+	}
+
 	return achivements.HistoryEvent{
 		Cmd:            prog,
 		At:             ts,
-		IsForce:        strings.Contains(cmd, "--force"),
 		SubCommand:     subcommand,
 		FileExtensions: exts,
+		Flags:          flags,
+
+		// Deprecated
+		IsForce: strings.Contains(cmd, "--force"),
+		IsRmRf:  strings.Contains(cmd, "-rf") || strings.Contains(cmd, "-fr"),
 	}
 }
 

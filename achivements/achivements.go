@@ -21,14 +21,17 @@ type Achivement struct {
 }
 
 type HistoryEvent struct {
-	Cmd        string    `json:"cmd"`
-	SubCommand string    `json:"subcommand,omitempty"`
-	At         time.Time `json:"at"`
+	Cmd string    `json:"cmd"`
+	At  time.Time `json:"at"`
 
+	SubCommand     string   `json:"subcommand,omitempty"`      // only tracked for whitelisted commands
+	Flags          []string `json:"flags"`                     // only tracked for whitelisted commands
+	FileExtensions []string `json:"file_extensions,omitempty"` // tracked for all commands
+
+	// Deprecated
 	IsForce bool `json:"is_force,omitempty"`
-	IsRmRf  bool `json:"is_rm_rf,omitempty"`
-
-	FileExtensions []string `json:"file_extensions,omitempty"`
+	// Deprecated
+	IsRmRf bool `json:"is_rm_rf,omitempty"`
 }
 
 type ConditionFunc func(HistoryEvent) bool
@@ -53,6 +56,17 @@ var (
 	withSubCommand = func(cmd, sub string) ConditionFunc {
 		return func(event HistoryEvent) bool {
 			return event.Cmd == cmd && event.SubCommand == sub
+		}
+	}
+
+	withFlag = func(flag string) ConditionFunc {
+		return func(event HistoryEvent) bool {
+			for _, e := range event.Flags {
+				if e == flag {
+					return true
+				}
+			}
+			return false
 		}
 	}
 
@@ -113,6 +127,23 @@ var (
 		}
 	}
 
+	or = func(filters ...ConditionFunc) FilterFunc {
+		return func(events []HistoryEvent) []HistoryEvent {
+			var res []HistoryEvent
+		loopEvents:
+			for _, e := range events {
+				for _, f := range filters {
+					if f(e) {
+						res = append(res, e)
+					} else {
+						continue loopEvents
+					}
+				}
+			}
+			return res
+		}
+	}
+
 	first = func(filters FilterFunc) AchivementFunc {
 		return nth(filters, 0)
 	}
@@ -127,14 +158,19 @@ var (
 		}
 	}
 
-	// Generally, the levels are
-	// 1, 50, 250, 1000 times
+	// Generally, the levels are awareded at 1, 50, 250, 1000 times
+
+	anyPython = or(withCommand("python2"), withCommand("python3"), withCommand("python"))
+	anyNpm    = or(withCommand("npm"), withCommand("yarn"), withCommand("pnpm"))
 
 	Achivements = []Achivement{
 		{Name: "Name your pet", Func: trueFunc},
 
 		// Deno
 		{Name: "node << 2", Description: "Use deno", Func: first(and(withCommand("deno")))},
+
+		// Node
+		{Name: "npm i left-pad", Description: "Install a npm package", Func: first(anyNpm)},
 
 		// Go
 		{Name: "Gopher", Description: "Use Go", Func: first(and(withCommand("go")))},
@@ -143,17 +179,18 @@ var (
 		{Name: "I love Rob", Description: "Use Go 1000 times", Func: nth(and(withCommand("go")), 1000)},
 
 		// Rust
-		{Name: "Getting Rusty", Description: "Use Cargo", Func: first(and(withCommand("cargo")))}, // TODO: allow cargo OR rustc?
-		{Name: "No bugs to be seen here", Description: "Use Cargo 50 times", Func: nth(and(withCommand("cargo")), 50)},
-		{Name: "Rewrite it in Rust", Description: "Use Cargo 250 times", Func: nth(and(withCommand("cargo")), 250)},
-		// TODO: Rust 1000 times
+		{Name: "Getting Rusty", Description: "Use Cargo", Func: first(or(withCommand("cargo"), withCommand("rustc")))},
+		{Name: "No bugs to be seen here", Description: "Use Cargo 50 times", Func: nth(or(withCommand("cargo"), withCommand("rustc")), 50)},
+		{Name: "Rewrite it in Rust", Description: "Use Cargo 250 times", Func: nth(or(withCommand("cargo"), withCommand("rustc")), 250)},
+		{Name: "Zero-cost abstracter", Description: "Use Cargo 1000 times", Func: nth(or(withCommand("cargo"), withCommand("rustc")), 1000)},
 
 		// Python
 		{Name: "Import from __legacy__", Description: "Use Python2", Func: first(and(withCommand("python2")))},
 		{Name: "Early adopter", Description: "Use Python3", Func: first(and(withCommand("python3")))},
-		{Name: "Master of indentation", Description: "Use Python 50 times", Func: nth(and(withCommand("python")), 50)},
-		{Name: "Parseltongue", Description: "Use Python 250 times", Func: nth(and(withCommand("python")), 250)},
-		// TODO: Python 1000 times
+		{Name: "Psuedocoder", Description: "Use Python", Func: nth(anyPython, 1)},
+		{Name: "Master of indentation", Description: "Use Python 50 times", Func: nth(anyPython, 50)},
+		{Name: "Pythonista", Description: "Use Python 250 times", Func: nth(anyPython, 250)},
+		{Name: "Parseltongue", Description: "Use Python 1000 times", Func: nth(anyPython, 1000)},
 
 		// Git
 		{Name: "Teamwork makes the dream work", Description: "Use git", Func: first(and(withCommand("git")))},
@@ -184,8 +221,25 @@ var (
 		{Name: "I love my cubicle", Description: "Use a command bewtween 07:00 and 17:00", Func: first(and(withHourRange(9, 17)))},
 		{Name: "Night owl", Description: "Use a command bewtween 01:00 and 03:00", Func: first(and(withHourRange(1, 3)))},
 
-		{Name: "Archivist", Description: "Use fzf to search the archives", Func: first(and(withCommand("fzf")))},
+		{Name: "Local Google", Description: "Use fzf", Func: first(and(withCommand("fzf")))},
 		{Name: "No backsies", Description: "Delete a directory with rm -rf", Func: first(and(withCommand("rm"), func(e HistoryEvent) bool { return e.IsRmRf }))},
+
+		// Misc commands and programs
+		{Name: "Reproducable Whales", Description: "Use docker", Func: first(and(withCommand("docker")))},
+		{Name: "Homemade 🍺", Description: "Use brew", Func: first(and(withCommand("brew")))},
+		{Name: "SELECT FROM json", Description: "Use jq", Func: first(and(withCommand("jq")))},
+		{Name: "Beam me up", Description: "Use ssh", Func: first(and(withCommand("ssh")))},
+		{Name: "Archivist", Description: "Use tar", Func: first(and(withCommand("tar")))},
+		{Name: "Cmd+C", Description: "Use pbcopy", Func: first(and(withCommand("pbcopy")))},
+
+		{Name: "You know you're screwed when", Description: "Use xcode-select --install, for the second time", Func: nth(and(withCommand("xcode-select"), withFlag("--install")), 2)},
+
+		// xcode-select --install
+		// curl, wget
+		// grep, rg
+		// jq
+		// ls
+		// htop
 	}
 )
 

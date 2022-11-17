@@ -1,4 +1,4 @@
-module github.com/zegl/hackagotchi
+module github.com/sturdy-dev/hackagotchi
 
 go 1.19
 

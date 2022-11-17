@@ -5,7 +5,7 @@
 * Daily quests
 * Hundreds of achivements
 * Keep coding, to keep your hackagotchi happy
-
+* 100% local, no tracking
 
 ## Installation
 

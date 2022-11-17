@@ -6,7 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/zegl/hackagotchi/achivements"
+	"github.com/sturdy-dev/hackagotchi/achivements"
 )
 
 type showAllAchivementsModel struct {

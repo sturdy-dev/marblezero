@@ -10,7 +10,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/zegl/hackagotchi/state"
+	"github.com/sturdy-dev/hackagotchi/state"
 )
 
 type Achivement struct {
@@ -31,9 +31,11 @@ type HistoryEvent struct {
 	FileExtensions []string `json:"file_extensions,omitempty"`
 }
 
-type AchivementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
+type ConditionFunc func(HistoryEvent) bool
 
-type AchivementFilterFunc func(event HistoryEvent) bool
+type FilterFunc func([]HistoryEvent) []HistoryEvent
+
+type AchivementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
 
 const achivementNameMaxLength = 29
 
@@ -42,56 +44,62 @@ var (
 		return true, &time.Time{}
 	}
 
-	usedCommandFunc = func(cmd string, times int) AchivementFunc {
-		return func(events []HistoryEvent) (bool, *time.Time) {
-			var c int
-			for _, e := range events {
-				if e.Cmd == cmd {
-					c++
-					if c >= times {
-						return true, &e.At
-					}
-				}
-			}
-			return false, nil
-		}
-	}
-
-	usedSubCommandFunc = func(cmd, subcommand string, times int) AchivementFunc {
-		return func(events []HistoryEvent) (bool, *time.Time) {
-			var c int
-			for _, e := range events {
-				if e.Cmd == cmd && e.SubCommand == subcommand {
-					c++
-					if c >= times {
-						return true, &e.At
-					}
-				}
-			}
-			return false, nil
-		}
-	}
-
-	withCommand = func(cmd string) AchivementFilterFunc {
+	withCommand = func(cmd string) ConditionFunc {
 		return func(event HistoryEvent) bool {
 			return event.Cmd == cmd
 		}
 	}
 
-	withSubCommand = func(cmd, sub string) AchivementFilterFunc {
+	withSubCommand = func(cmd, sub string) ConditionFunc {
 		return func(event HistoryEvent) bool {
 			return event.Cmd == cmd && event.SubCommand == sub
 		}
 	}
 
-	withHourRange = func(min, max int) AchivementFilterFunc {
+	withHourRange = func(min, max int) ConditionFunc {
 		return func(event HistoryEvent) bool {
 			return event.At.Hour() >= min && event.At.Hour() <= max
 		}
 	}
 
-	filter = func(filters ...AchivementFilterFunc) AchivementFunc {
+	withUniqueFileExtsMin = func(min int) ConditionFunc {
+		return func(event HistoryEvent) bool {
+			m := make(map[string]struct{})
+			for _, e := range event.FileExtensions {
+				m[e] = struct{}{}
+			}
+			return len(m) >= min
+		}
+	}
+
+	withExts = func(exts ...string) ConditionFunc {
+		return func(event HistoryEvent) bool {
+			m := make(map[string]struct{})
+			for _, e := range event.FileExtensions {
+				m[e] = struct{}{}
+			}
+			for _, ext := range exts {
+				if _, ok := m[ext]; !ok {
+					return false
+				}
+			}
+			return true
+		}
+	}
+
+	times = func(n int) AchivementFunc {
 		return func(events []HistoryEvent) (bool, *time.Time) {
+			if len(events) < n {
+				return false, nil
+			}
+			t := events[n]
+			return true, &t.At
+		}
+	}
+
+	and = func(filters ...ConditionFunc) FilterFunc {
+		return func(events []HistoryEvent) []HistoryEvent {
+			var res []HistoryEvent
 		loopEvents:
 			for _, e := range events {
 				for _, f := range filters {
@@ -99,61 +107,85 @@ var (
 						continue loopEvents
 					}
 				}
-				return true, &e.At
+				res = append(res, e)
 			}
-			return false, nil
+			return res
 		}
 	}
+
+	first = func(filters FilterFunc) AchivementFunc {
+		return nth(filters, 0)
+	}
+
+	nth = func(filters FilterFunc, n int) AchivementFunc {
+		return func(events []HistoryEvent) (bool, *time.Time) {
+			filtered := filters(events)
+			if len(filtered) <= n {
+				return false, nil
+			}
+			return true, &filtered[n].At
+		}
+	}
+
+	// Generally, the levels are
+	// 1, 50, 250, 1000 times
 
 	Achivements = []Achivement{
 		{Name: "Name your pet", Func: trueFunc},
 
 		// Deno
-		{Name: "node << 2", Description: "Use deno", Func: usedCommandFunc("deno", 1)},
+		{Name: "node << 2", Description: "Use deno", Func: first(and(withCommand("deno")))},
 
 		// Go
-		{Name: "Gopher", Description: "Use Go", Func: usedCommandFunc("go", 1)},
-		{Name: "Go-go-gadget!", Description: "Use Go 10 times", Func: usedCommandFunc("go", 10)},
-		{Name: "I love Rob", Description: "Use Go 1000 times", Func: usedCommandFunc("go", 1000)},
+		{Name: "Gopher", Description: "Use Go", Func: first(and(withCommand("go")))},
+		{Name: "Go-go-gadget!", Description: "Use Go 50 times", Func: nth(and(withCommand("go")), 50)},
+		{Name: "if err != nil", Description: "Use Go 250 times", Func: nth(and(withCommand("go")), 250)},
+		{Name: "I love Rob", Description: "Use Go 1000 times", Func: nth(and(withCommand("go")), 1000)},
 
 		// Rust
-		{Name: "Getting Rusty", Description: "Use Cargo", Func: usedCommandFunc("cargo", 1)},
-		{Name: "No bugs to be seen here", Description: "Use Cargo 50 times", Func: usedCommandFunc("cargo", 50)},
-		{Name: "Rewrite it in Rust", Description: "Use Cargo 100 times", Func: usedCommandFunc("cargo", 100)},
+		{Name: "Getting Rusty", Description: "Use Cargo", Func: first(and(withCommand("cargo")))}, // TODO: allow cargo OR rustc?
+		{Name: "No bugs to be seen here", Description: "Use Cargo 50 times", Func: nth(and(withCommand("cargo")), 50)},
+		{Name: "Rewrite it in Rust", Description: "Use Cargo 250 times", Func: nth(and(withCommand("cargo")), 250)},
+		// TODO: Rust 1000 times
 
 		// Python
-		{Name: "Import from __legacy__", Description: "Use Python2 10 times", Func: usedCommandFunc("python2", 10)},
-		{Name: "Early adopter", Description: "Use Python3", Func: usedCommandFunc("python3", 1)},
-		{Name: "Master of indentation", Description: "Use Python 100 times", Func: usedCommandFunc("python", 100)},
-		{Name: "Parseltongue", Description: "Use Python 1000 times", Func: usedCommandFunc("python", 1000)},
+		{Name: "Import from __legacy__", Description: "Use Python2", Func: first(and(withCommand("python2")))},
+		{Name: "Early adopter", Description: "Use Python3", Func: first(and(withCommand("python3")))},
+		{Name: "Master of indentation", Description: "Use Python 50 times", Func: nth(and(withCommand("python")), 50)},
+		{Name: "Parseltongue", Description: "Use Python 250 times", Func: nth(and(withCommand("python")), 250)},
+		// TODO: Python 1000 times
 
 		// Git
-		{Name: "Teamwork makes the dream work", Description: "Use git", Func: usedCommandFunc("git", 1)},
-		{Name: "Oncaller", Description: "Make a git commit in the middle of the night", Func: filter(withSubCommand("git", "commit"), withHourRange(2, 5))},
-		{Name: "Use the --force", Description: "Use a git command with --force", Func: filter(withCommand("git"), func(e HistoryEvent) bool { return e.IsForce })},
+		{Name: "Teamwork makes the dream work", Description: "Use git", Func: first(and(withCommand("git")))},
+		{Name: "Oncaller", Description: "Make a git commit in the middle of the night", Func: first(and(withSubCommand("git", "commit"), withHourRange(2, 5)))},
+		{Name: "Use the --force", Description: "Use a git command with --force", Func: first(and(withCommand("git"), func(e HistoryEvent) bool { return e.IsForce }))},
 
 		// Git commit streaks
-		{Name: "Contributor", Description: "Make 10 git commits", Func: usedSubCommandFunc("git", "commit", 5)},
-		{Name: "Developer", Description: "Make 25 git commits", Func: usedSubCommandFunc("git", "commit", 25)},
-		{Name: "Coder", Description: "Make 100 git commits", Func: usedSubCommandFunc("git", "commit", 50)},
-		{Name: "10xer", Description: "Make 500 git commits", Func: usedSubCommandFunc("git", "commit", 500)},
+		{Name: "Contributor", Description: "Make a git commit", Func: first(and(withSubCommand("git", "commit")))},
+		{Name: "Developer", Description: "Make 50 git commits", Func: nth(and(withSubCommand("git", "commit")), 50)},
+		{Name: "Coder", Description: "Make 250 git commits", Func: nth(and(withSubCommand("git", "commit")), 250)},
+		{Name: "10xer", Description: "Make 1000 git commits", Func: nth(and(withSubCommand("git", "commit")), 1000)},
+
+		// Polyglot
+		{Name: "Polyglot", Description: "Add 3 files with different extensions to the git staging area", Func: first(and(withSubCommand("git", "add"), withUniqueFileExtsMin(3)))},
+		{Name: "International Spy", Description: "Add 3 files with different extensions to the git staging area, 50 times", Func: nth(and(withSubCommand("git", "add"), withUniqueFileExtsMin(3)), 50)},
 
 		// Editors
-		{Name: "How do I exit this thing?", Description: "Edit a file with vim", Func: filter(withCommand("vim"))},
-		{Name: "M-x give-me-achivement", Description: "Edit a file with emacs", Func: filter(withCommand("emacs"))},
-		{Name: "Keeping it simple", Description: "Edit a file with nano", Func: filter(withCommand("nano"))},
+		{Name: "How do I exit this thing?", Description: "Edit a file with vim", Func: first(and(withCommand("vim")))},
+		{Name: "M-x give-me-achivement", Description: "Edit a file with emacs", Func: first(and(withCommand("emacs")))},
+		{Name: "Keeping it simple", Description: "Edit a file with nano", Func: first(and(withCommand("nano")))},
 
 		// Shells
-		{Name: "Show 'em whos boss", Description: "Use sudo", Func: filter(withCommand("sudo"))},
-		{Name: "Back to the past", Description: "Use sh", Func: filter(withCommand("sh"))},
-		{Name: "Gone fishin' 🐟", Description: "Use fish", Func: filter(withCommand("fish"))},
+		{Name: "Show 'em whos boss", Description: "Use sudo", Func: first(and(withCommand("sudo")))},
+		{Name: "Back to the past", Description: "Use sh", Func: first(and(withCommand("sh")))},
+		{Name: "Gone fishin' 🐟", Description: "Use fish", Func: first(and(withCommand("fish")))}, // Alternative title: "90s kid"
 
-		{Name: "Early bird", Description: "Use a command bewtween 05:00 and 07:00", Func: filter(withHourRange(5, 7))},
-		{Name: "I love my cubicle", Description: "Use a command bewtween 07:00 and 17:00", Func: filter(withHourRange(9, 17))},
-		{Name: "Night owl", Description: "Use a command bewtween 01:00 and 03:00", Func: filter(withHourRange(1, 3))},
+		{Name: "Early bird", Description: "Use a command bewtween 05:00 and 07:00", Func: first(and(withHourRange(5, 7)))},
+		{Name: "I love my cubicle", Description: "Use a command bewtween 07:00 and 17:00", Func: first(and(withHourRange(9, 17)))},
+		{Name: "Night owl", Description: "Use a command bewtween 01:00 and 03:00", Func: first(and(withHourRange(1, 3)))},
 
-		{Name: "Archivist", Description: "Use fzf to search the archives", Func: usedCommandFunc("fzf", 1)},
-		{Name: "No looking back", Description: "Delete a directory with rm -rf", Func: filter(withCommand("rm"), func(e HistoryEvent) bool { return e.IsRmRf })},
+		{Name: "Archivist", Description: "Use fzf to search the archives", Func: first(and(withCommand("fzf")))},
+		{Name: "No backsies", Description: "Delete a directory with rm -rf", Func: first(and(withCommand("rm"), func(e HistoryEvent) bool { return e.IsRmRf }))},
 	}
 )
 

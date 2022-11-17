@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/zegl/hackagotchi/achivements"
-	"github.com/zegl/hackagotchi/state"
+	"github.com/sturdy-dev/hackagotchi/achivements"
+	"github.com/sturdy-dev/hackagotchi/state"
 )
 
 func parse(cmd string, ts time.Time) achivements.HistoryEvent {

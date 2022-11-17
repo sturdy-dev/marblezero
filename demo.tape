@@ -11,7 +11,7 @@ Set Height 600
 # fix(zegl): temporary workaround for https://github.com/charmbracelet/vhs/issues/39
 Hide Sleep 1s Show
 
-Type "# Let's meet our Hackagotchi!"
+Type "# Let's meet your Hackagotchi!"
 Sleep 500ms
 Enter
 

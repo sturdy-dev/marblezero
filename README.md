@@ -1,31 +1,31 @@
-# Hackagotchi – A pet for your computer
+# Marble Zero – A virtual pet for your computer
 
 ![](./demo/intro.gif)
 
-* Code to keep your hackagotchi happy
-* 100% local, no tracking
-* Daily quests _(coming soon)_
+* Code to keep your Marble happy
 * Hundreds of achivements
+* Daily quests _(coming soon)_
+* 100% local, no tracking
 
 ## Installation
 
 ```bash
-go install github.com/sturdy-dev/hackagotchi@latest
+go install github.com/sturdy-dev/marblezero@latest
 ```
 
 ### Shell Integration (required)
 
 ```bash
 # zsh (macOS Default Shelll)
-echo "eval \"\$(hackagotchi --zsh)\"" >> ~/.zshrc
-eval "$(hackagotchi --zsh)"
+echo "eval \"\$(marblezero --zsh)\"" >> ~/.zshrc
+eval "$(marblezero --zsh)"
 
 # Fish
-echo "hackagotchi --fish | source" >> ~/.config/fish/config.fish
-hackagotchi --fish | source
+echo "marblezero --fish | source" >> ~/.config/fish/config.fish
+marblezero --fish | source
 ```
 
-Feed your hackagotchi by running commands on the command line. The shell integration registers a pre-exec hook to automatically run hackagotchi when you run a command. All processing is done on your device! 
+Feed your Marble by running commands on the command line. The shell integration registers a pre-exec hook to automatically run hackagotchi when you run a command. All processing is done on your device! 
 
 ## Help
 

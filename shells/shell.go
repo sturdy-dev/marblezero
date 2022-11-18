@@ -2,8 +2,8 @@ package shells
 
 import _ "embed"
 
-//go:embed hackagotchi.fish
+//go:embed marblezero.fish
 var Fish string
 
-//go:embed hackagotchi.zsh
+//go:embed marblezero.zsh
 var Zsh string

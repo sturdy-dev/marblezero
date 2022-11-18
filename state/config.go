@@ -23,12 +23,12 @@ func NewStoragePath() (StoragePath, error) {
 		return "", fmt.Errorf("could not find config dir: %w", err)
 	}
 
-	hackagotchiDir := path.Join(homeDir, ".config", "hackagotchi")
-	if err := os.MkdirAll(hackagotchiDir, 0777); err != nil {
-		return "", fmt.Errorf("failed to create ~/.config/hackagotchi directory: %w", err)
+	configDir := path.Join(homeDir, ".config", "marblezero")
+	if err := os.MkdirAll(configDir, 0777); err != nil {
+		return "", fmt.Errorf("failed to create ~/.config/marblezero directory: %w", err)
 	}
 
-	return StoragePath(hackagotchiDir), nil
+	return StoragePath(configDir), nil
 }
 
 func LoadConfig(storagePath StoragePath) (*Config, error) {

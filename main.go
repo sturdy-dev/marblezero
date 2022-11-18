@@ -12,11 +12,11 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/sturdy-dev/hackagotchi/achivements"
-	"github.com/sturdy-dev/hackagotchi/cats"
-	"github.com/sturdy-dev/hackagotchi/ingest"
-	"github.com/sturdy-dev/hackagotchi/shells"
-	"github.com/sturdy-dev/hackagotchi/state"
+	"github.com/sturdy-dev/marblezero/achivements"
+	"github.com/sturdy-dev/marblezero/cats"
+	"github.com/sturdy-dev/marblezero/ingest"
+	"github.com/sturdy-dev/marblezero/shells"
+	"github.com/sturdy-dev/marblezero/state"
 )
 
 var (
@@ -151,7 +151,7 @@ type model struct {
 
 func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
 	ti := textinput.New()
-	ti.Placeholder = "Nala"
+	ti.Placeholder = "Marble"
 	ti.Focus()
 	ti.CharLimit = 12
 	ti.Width = 12

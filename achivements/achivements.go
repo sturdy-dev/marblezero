@@ -10,7 +10,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/sturdy-dev/hackagotchi/state"
+	"github.com/sturdy-dev/marblezero/state"
 )
 
 type Achivement struct {
@@ -233,6 +233,9 @@ var (
 		{Name: "Cmd+C", Description: "Use pbcopy", Func: first(and(withCommand("pbcopy")))},
 
 		{Name: "You know you're screwed when", Description: "Use xcode-select --install, for the second time", Func: nth(and(withCommand("xcode-select"), withFlag("--install")), 2)},
+
+		// Meta
+		{Name: "Caretaker", Description: "Launch Marble Zero 10 times", Func: nth(and(withCommand("marblezero")), 25)},
 
 		// xcode-select --install
 		// curl, wget

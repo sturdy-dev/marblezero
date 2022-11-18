@@ -1,4 +1,4 @@
 #!/usr/bin/env fish
 
-rm ~/.config/hackagotchi/config.json
+rm ~/.config/marblezero/config.json
 vhs demo.tape

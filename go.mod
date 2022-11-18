@@ -1,4 +1,4 @@
-module github.com/sturdy-dev/hackagotchi
+module github.com/sturdy-dev/marblezero
 
 go 1.19
 

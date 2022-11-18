@@ -1,4 +1,4 @@
-# Marble Zero – A virtual pet for your computer
+# 🐈 Marble Zero – The Hackers Pet
 
 ![](./demo/intro.gif)
 

@@ -162,6 +162,7 @@ var (
 
 	anyPython = or(withCommand("python2"), withCommand("python3"), withCommand("python"))
 	anyNpm    = or(withCommand("npm"), withCommand("yarn"), withCommand("pnpm"))
+	anyJava   = or(withCommand("javac"), withCommand("gradlew"), withCommand("gradle"), withCommand("mvn"))
 
 	Achivements = []Achivement{
 		{Name: "Name your pet", Func: trueFunc},
@@ -203,6 +204,26 @@ var (
 		{Name: "Coder", Description: "Make 250 git commits", Func: nth(and(withSubCommand("git", "commit")), 250)},
 		{Name: "10xer", Description: "Make 1000 git commits", Func: nth(and(withSubCommand("git", "commit")), 1000)},
 
+		// Java
+		{Name: "A cup of coffee", Description: "Use java", Func: first(anyJava)},
+		{Name: "JavaFactoryManagerBuilder", Description: "Use java 50 times", Func: nth(anyJava, 50)},
+		{Name: "OO > OOMs", Description: "Use java 250 times", Func: nth(anyJava, 250)},
+		{Name: "Indonesian native", Description: "Use java 1000 times", Func: nth(anyJava, 1000)},
+
+		// Bazel
+		{Name: "Fast and Correct", Description: "Use Bazel", Func: first(and(withCommand("bazel")))},
+		{Name: "Chosing both", Description: "Use Bazel 50 times", Func: nth(and(withCommand("bazel")), 50)},
+		{Name: "Airtight", Description: "Use Bazel 250 times", Func: nth(and(withCommand("bazel")), 250)},
+		{Name: "No escaping the jail", Description: "Use Bazel 1000 times", Func: nth(and(withCommand("bazel")), 1000)},
+
+		// pushd/popd
+		{Name: "Power navigator", Description: "Use popd or pushd", Func: first(or(withCommand("pushd"), withCommand("popd")))},
+
+		// Downloads
+		{Name: "Curlious", Description: "Use curl", Func: first(and(withCommand("curl")))},
+		{Name: "Get it?", Description: "Use wget", Func: first(and(withCommand("wget")))},
+		{Name: "Safety first", Description: "Use sha25sum", Func: first(and(withCommand("sha256sum")))},
+
 		// Polyglot
 		{Name: "Polyglot", Description: "Add 3 files with different extensions to the git staging area", Func: first(and(withSubCommand("git", "add"), withUniqueFileExtsMin(3)))},
 		{Name: "International Spy", Description: "Add 3 files with different extensions to the git staging area, 50 times", Func: nth(and(withSubCommand("git", "add"), withUniqueFileExtsMin(3)), 50)},
@@ -224,23 +245,30 @@ var (
 		{Name: "Local Google", Description: "Use fzf", Func: first(and(withCommand("fzf")))},
 		{Name: "No backsies", Description: "Delete a directory with rm -rf", Func: first(and(withCommand("rm"), func(e HistoryEvent) bool { return e.IsRmRf }))},
 
-		// Misc commands and programs
+		// Docker
 		{Name: "Reproducable Whales", Description: "Use docker", Func: first(and(withCommand("docker")))},
+		{Name: "Works on my machine", Description: "Use docker 50 times", Func: nth(and(withCommand("docker")), 50)},
+		{Name: "I ❤️ :latest", Description: "Use docker 250 times", Func: nth(and(withCommand("docker")), 250)},
+		{Name: "Testing in production", Description: "Use docker 1000 times", Func: nth(and(withCommand("docker")), 1000)},
+
+		// Kubernetes
+		{Name: "Kubernaught", Description: "Use kubectl", Func: first(and(withCommand("kubectl")))},
+		{Name: "YAML-engineer", Description: "Use kubectl 50 times", Func: nth(and(withCommand("kubectl")), 50)},
+		{Name: "My other computer is the cloud", Description: "Use kubectl 250 times", Func: nth(and(withCommand("kubectl")), 250)},
+		{Name: "Cloud Native", Description: "Use kubectl 1000 times", Func: nth(and(withCommand("kubectl")), 1000)},
+
+		// Misc commands and programs
 		{Name: "Homemade 🍺", Description: "Use brew", Func: first(and(withCommand("brew")))},
 		{Name: "SELECT FROM json", Description: "Use jq", Func: first(and(withCommand("jq")))},
 		{Name: "Beam me up", Description: "Use ssh", Func: first(and(withCommand("ssh")))},
 		{Name: "Archivist", Description: "Use tar", Func: first(and(withCommand("tar")))},
-		{Name: "Cmd+C", Description: "Use pbcopy", Func: first(and(withCommand("pbcopy")))},
-
+		{Name: "Stack Overflow", Description: "Use pbcopy", Func: first(and(withCommand("pbcopy")))},
 		{Name: "You know you're screwed when", Description: "Use xcode-select --install, for the second time", Func: nth(and(withCommand("xcode-select"), withFlag("--install")), 2)},
+		{Name: "Found Waldo", Description: "Use grep", Func: first(or(withCommand("grep"), withCommand("rg")))},
 
 		// Meta
-		{Name: "Caretaker", Description: "Launch Marble Zero 10 times", Func: nth(and(withCommand("marblezero")), 25)},
+		{Name: "Caretaker", Description: "Launch Marble Zero 10 times", Func: nth(and(withCommand("marblezero")), 10)},
 
-		// xcode-select --install
-		// curl, wget
-		// grep, rg
-		// jq
 		// ls
 		// htop
 	}

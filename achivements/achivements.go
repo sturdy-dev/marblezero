@@ -40,7 +40,7 @@ type FilterFunc func([]HistoryEvent) []HistoryEvent
 
 type AchivementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
 
-const achivementNameMaxLength = 29
+const achivementNameMaxLength = 30
 
 var (
 	trueFunc AchivementFunc = func(events []HistoryEvent) (bool, *time.Time) {

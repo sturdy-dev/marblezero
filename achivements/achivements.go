@@ -254,7 +254,7 @@ var (
 		// Kubernetes
 		{Name: "Kubernaught", Description: "Use kubectl", Func: first(and(withCommand("kubectl")))},
 		{Name: "YAML-engineer", Description: "Use kubectl 50 times", Func: nth(and(withCommand("kubectl")), 50)},
-		{Name: "My other computer is the cloud", Description: "Use kubectl 250 times", Func: nth(and(withCommand("kubectl")), 250)},
+		{Name: "The cloud is my computer", Description: "Use kubectl 250 times", Func: nth(and(withCommand("kubectl")), 250)},
 		{Name: "Cloud Native", Description: "Use kubectl 1000 times", Func: nth(and(withCommand("kubectl")), 1000)},
 
 		// Misc commands and programs

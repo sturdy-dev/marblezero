@@ -3,7 +3,7 @@
 ![](./demo/intro.gif)
 
 * Code to keep your Marble happy
-* Hundreds of achivements
+* Hundreds of achievements
 * Daily quests _(coming soon)_
 * 100% local, no tracking
 

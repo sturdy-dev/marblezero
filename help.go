@@ -29,7 +29,7 @@ func (m *helpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *helpModel) View() string {
 	var commands []string = []string{
 		listHeader("Commands"),
-		"a: show achivements",
+		"a: show achievements",
 		"r: rename your pet",
 		"q / esc / enter / cmd+c: quit",
 		"",

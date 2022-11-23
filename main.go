@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/sturdy-dev/marblezero/achivements"
+	achievements "github.com/sturdy-dev/marblezero/achievements"
 	"github.com/sturdy-dev/marblezero/cats"
 	"github.com/sturdy-dev/marblezero/ingest"
 	"github.com/sturdy-dev/marblezero/shells"
@@ -103,7 +103,7 @@ func main() {
 		return
 	}
 
-	events, err := achivements.ParseHistory(storagePath)
+	events, err := achievements.ParseHistory(storagePath)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -113,7 +113,7 @@ func main() {
 	output(config, events)
 }
 
-func output(config *state.Config, events []achivements.HistoryEvent) {
+func output(config *state.Config, events []achievements.HistoryEvent) {
 
 	// Set debug colors
 	if *flagDebugColorMode {
@@ -133,7 +133,7 @@ type Screen int
 const (
 	HomeScreen Screen = iota
 	SetupNameScreen
-	ListAllAchivementsScreen
+	ListAllAchievementsScreen
 	HelpScreen
 )
 
@@ -143,13 +143,13 @@ type model struct {
 	textInput textinput.Model
 	config    *state.Config
 
-	events               []achivements.HistoryEvent
-	completedAchivements []achivements.Achivement
+	events                []achievements.HistoryEvent
+	completedAchievements []achievements.Achievement
 
 	rightScreenModel tea.Model
 }
 
-func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
+func NewModel(config *state.Config, events []achievements.HistoryEvent) *model {
 	ti := textinput.New()
 	ti.Placeholder = "Marble"
 	ti.Focus()
@@ -166,24 +166,24 @@ func NewModel(config *state.Config, events []achivements.HistoryEvent) *model {
 		screen = SetupNameScreen
 	}
 
-	// Calculate awarded achivements
-	var completedAchivements []achivements.Achivement
-	for _, a := range achivements.Achivements {
+	// Calculate awarded achievements
+	var completedAchievements []achievements.Achievement
+	for _, a := range achievements.Achievements {
 		if ok, at := a.Func(events); ok {
 			a.AwardedAt = *at
-			completedAchivements = append(completedAchivements, a)
+			completedAchievements = append(completedAchievements, a)
 		}
 	}
-	sort.Slice(completedAchivements, func(a, b int) bool {
-		return completedAchivements[a].AwardedAt.After(completedAchivements[b].AwardedAt)
+	sort.Slice(completedAchievements, func(a, b int) bool {
+		return completedAchievements[a].AwardedAt.After(completedAchievements[b].AwardedAt)
 	})
 
 	return &model{
-		screen:               screen,
-		config:               config,
-		textInput:            ti,
-		events:               events,
-		completedAchivements: completedAchivements,
+		screen:                screen,
+		config:                config,
+		textInput:             ti,
+		events:                events,
+		completedAchievements: completedAchievements,
 	}
 }
 
@@ -209,7 +209,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.screen = HomeScreen
 					m.frame = 0 // reset counter
 				}
-			} else if m.screen == ListAllAchivementsScreen {
+			} else if m.screen == ListAllAchievementsScreen {
 				m.screen = HomeScreen // go back
 			} else if m.screen == HelpScreen {
 				m.screen = HomeScreen // go back
@@ -223,11 +223,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.screen = SetupNameScreen
 			}
 
-		// List all achivements
+		// List all achievements
 		case "a":
 			if m.screen == HomeScreen {
-				m.screen = ListAllAchivementsScreen
-				m.rightScreenModel = NewShowAllAchivementsModel(m.events)
+				m.screen = ListAllAchievementsScreen
+				m.rightScreenModel = NewShowAllAchievementsModel(m.events)
 			}
 
 		// show help
@@ -241,7 +241,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "esc":
 			if m.screen == HomeScreen {
 				return m, tea.Quit
-			} else if m.screen == ListAllAchivementsScreen {
+			} else if m.screen == ListAllAchievementsScreen {
 				m.screen = HomeScreen // go back
 			} else if m.screen == HelpScreen {
 				m.screen = HomeScreen // go back
@@ -295,40 +295,40 @@ func (m model) View() string {
 		cat = cats[m.frame%len(cats)]
 	}
 
-	level := len(m.completedAchivements)/3 + 1
-	xp := len(m.completedAchivements) * 13
+	level := len(m.completedAchievements)/3 + 1
+	xp := len(m.completedAchievements) * 13
 
 	var deviceRight string
 	switch m.screen {
 	case HomeScreen:
 		charStats := fmt.Sprintf("%s\nMood: Happy\nLevel: %d (%d XP)", m.config.Name, level, xp)
 
-		latestAchivementHeader := inScreenStyle.Copy().
+		latestAchievementHeader := inScreenStyle.Copy().
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderBottom(true).
 			BorderForeground(yellow).
 			Foreground(yellow).
 			MarginTop(2).
 			Width(29).
-			Render("Latest Achivement")
+			Render("Latest Achievements")
 
-		a := m.completedAchivements[0]
+		a := m.completedAchievements[0]
 
-		achivementName := inScreenStyle.Copy().Bold(true).Render(a.Name)
-		// achivementXP := inScreenStyle.Copy().Render(fmt.Sprintf(" (%d XP)", 25))
-		achivementDescription := inScreenStyle.Copy().Foreground(subtle).Render(a.Description)
+		achievementName := inScreenStyle.Copy().Bold(true).Render(a.Name)
+		// achievementXP := inScreenStyle.Copy().Render(fmt.Sprintf(" (%d XP)", 25))
+		achievementDescription := inScreenStyle.Copy().Foreground(subtle).Render(a.Description)
 
-		latestAchivement := inScreenStyle.Copy().Width(29).Render(fmt.Sprintf("%s\n%s\n(%d XP)", achivementName, achivementDescription, 12))
+		latestAchievement := inScreenStyle.Copy().Width(29).Render(fmt.Sprintf("%s\n%s\n(%d XP)", achievementName, achievementDescription, 12))
 
 		deviceRight = deviceRightStyle.Copy().PaddingLeft(3).Render(
-			lipgloss.JoinVertical(lipgloss.Left, charStats, latestAchivementHeader, latestAchivement),
+			lipgloss.JoinVertical(lipgloss.Left, charStats, latestAchievementHeader, latestAchievement),
 		)
 
 	case SetupNameScreen:
 		bubble := inScreenStyle.Copy().Padding(0).Height(0).Render(lipgloss.JoinHorizontal(lipgloss.Bottom, "<\n", speechBubble.Render("Meow! Meow!\nWhat's my name?")))
 		deviceRight = deviceRightStyle.PaddingLeft(3).Render(lipgloss.JoinVertical(lipgloss.Left, "\n\n", bubble, m.textInput.View()))
 
-	case ListAllAchivementsScreen, HelpScreen:
+	case ListAllAchievementsScreen, HelpScreen:
 		deviceRight = m.rightScreenModel.View()
 	}
 

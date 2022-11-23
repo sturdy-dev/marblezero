@@ -35,6 +35,6 @@ Type "q"
 Sleep 1
 Type "# Isn't she cute?"
 Enter
-Type "# Collect achivements and complete daily tasks to keep your pet happy."
+Type "# Collect achievements and complete daily tasks to keep your pet happy."
 Enter
 Sleep 2

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/sturdy-dev/hackagotchi/achivements"
+	"github.com/sturdy-dev/hackagotchi/achievements"
 )
 
 func TestParse(t *testing.T) {
@@ -13,11 +13,11 @@ func TestParse(t *testing.T) {
 
 	cases := []struct {
 		cmd      string
-		expected achivements.HistoryEvent
+		expected achievements.HistoryEvent
 	}{
 		{
 			cmd: "git add foo.go bar.go yes.py lalalalalalalallaa .DS_Store hello. what.s",
-			expected: achivements.HistoryEvent{
+			expected: achievements.HistoryEvent{
 				Cmd:            "git",
 				SubCommand:     "add",
 				FileExtensions: []string{"go", "go", "py", "s"},
@@ -26,7 +26,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			cmd: "git push --force",
-			expected: achivements.HistoryEvent{
+			expected: achievements.HistoryEvent{
 				Cmd:        "git",
 				SubCommand: "push",
 				IsForce:    true,

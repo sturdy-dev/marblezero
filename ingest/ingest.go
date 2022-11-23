@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sturdy-dev/marblezero/achivements"
+	"github.com/sturdy-dev/marblezero/achievements"
 	"github.com/sturdy-dev/marblezero/state"
 )
 
-func parse(cmd string, ts time.Time) achivements.HistoryEvent {
+func parse(cmd string, ts time.Time) achievements.HistoryEvent {
 	parts := strings.Split(cmd, " ")
 	prog := parts[0]
 
@@ -50,7 +50,7 @@ func parse(cmd string, ts time.Time) achivements.HistoryEvent {
 		}
 	}
 
-	return achivements.HistoryEvent{
+	return achievements.HistoryEvent{
 		Cmd:            prog,
 		At:             ts,
 		SubCommand:     subcommand,

@@ -1,4 +1,4 @@
-package achivements
+package achievements
 
 import (
 	"bufio"
@@ -13,11 +13,11 @@ import (
 	"github.com/sturdy-dev/marblezero/state"
 )
 
-type Achivement struct {
+type achievement struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	AwardedAt   time.Time `json:"awarded_at"`
-	Func        AchivementFunc
+	Func        AchievementFunc
 }
 
 type HistoryEvent struct {
@@ -38,12 +38,12 @@ type ConditionFunc func(HistoryEvent) bool
 
 type FilterFunc func([]HistoryEvent) []HistoryEvent
 
-type AchivementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
+type AchievementFunc func(events []HistoryEvent) (awarded bool, at *time.Time)
 
-const achivementNameMaxLength = 29
+const achievementNameMaxLength = 29
 
 var (
-	trueFunc AchivementFunc = func(events []HistoryEvent) (bool, *time.Time) {
+	trueFunc AchievementFunc = func(events []HistoryEvent) (bool, *time.Time) {
 		return true, &time.Time{}
 	}
 
@@ -101,7 +101,7 @@ var (
 		}
 	}
 
-	times = func(n int) AchivementFunc {
+	times = func(n int) AchievementFunc {
 		return func(events []HistoryEvent) (bool, *time.Time) {
 			if len(events) < n {
 				return false, nil
@@ -144,11 +144,11 @@ var (
 		}
 	}
 
-	first = func(filters FilterFunc) AchivementFunc {
+	first = func(filters FilterFunc) AchievementFunc {
 		return nth(filters, 0)
 	}
 
-	nth = func(filters FilterFunc, n int) AchivementFunc {
+	nth = func(filters FilterFunc, n int) AchievementFunc {
 		return func(events []HistoryEvent) (bool, *time.Time) {
 			filtered := filters(events)
 			if len(filtered) <= n {
@@ -164,7 +164,7 @@ var (
 	anyNpm    = or(withCommand("npm"), withCommand("yarn"), withCommand("pnpm"))
 	anyJava   = or(withCommand("javac"), withCommand("gradlew"), withCommand("gradle"), withCommand("mvn"))
 
-	Achivements = []Achivement{
+	Achievements = []Achievement{
 		{Name: "Name your pet", Func: trueFunc},
 
 		// Deno
@@ -230,7 +230,7 @@ var (
 
 		// Editors
 		{Name: "How do I exit this thing?", Description: "Edit a file with vim", Func: first(and(withCommand("vim")))},
-		{Name: "M-x give-me-achivement", Description: "Edit a file with emacs", Func: first(and(withCommand("emacs")))},
+		{Name: "M-x give-me-achievement", Description: "Edit a file with emacs", Func: first(and(withCommand("emacs")))},
 		{Name: "Keeping it simple", Description: "Edit a file with nano", Func: first(and(withCommand("nano")))},
 
 		// Shells
@@ -301,9 +301,9 @@ func ParseHistory(storagePath state.StoragePath) ([]HistoryEvent, error) {
 }
 
 func init() {
-	for _, a := range Achivements {
-		if len(a.Name) > achivementNameMaxLength {
-			log.Printf("Achivement name (%s) is too long. Len=%d MaxAllowed=%d", a.Name, len(a.Name), achivementNameMaxLength)
+	for _, a := range Achievements {
+		if len(a.Name) > achievementNameMaxLength {
+			log.Printf("Achievement name (%s) is too long. Len=%d MaxAllowed=%d", a.Name, len(a.Name), achievementNameMaxLength)
 		}
 	}
 }

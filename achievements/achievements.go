@@ -13,7 +13,7 @@ import (
 	"github.com/sturdy-dev/marblezero/state"
 )
 
-type achievement struct {
+type Achievement struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	AwardedAt   time.Time `json:"awarded_at"`
